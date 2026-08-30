@@ -1,239 +1,190 @@
-# GenAI Code Debugger
+# GenAI Code Debugger : AI-powered debugging that finds, explains, and fixes bugs
 
-A multi-pass Python code debugging pipeline that combines deterministic AST analysis with a locally hosted Qwen 2.5 Coder model through Ollama to identify, explain, and fix bugs in Python code. The project uses a FastAPI backend, a React + Vite frontend, and a small RAG layer for retrieval-backed prompting.[1][2][3][4]
+**GenAI Code Debugger** is an intelligent Python code debugging system that combines deterministic AST-based analysis with a locally hosted Qwen 2.5 Coder model through Ollama. It analyzes code, logs, and user queries to identify bugs, explain their causes, and suggest fixes using a multi-pass LLM pipeline with RAG-based context retrieval.
 
-***
-
-## Overview
-
-The pipeline first performs deterministic AST-based bug detection for known structural patterns, then sends the code, logs, and retrieved context to the local model for explanation and semantic bug discovery. It can optionally run a second pass on longer files, critique the answer against a checklist, refine the result, and deduplicate repeated bug reports before returning the final response.[5][1][2]
-
-## Architecture
-
-```text
-Input: code + logs + question
-         │
-         ▼
-┌─────────────────────────────┐
-│       AST Pre-Detector      │
-│  · =+ instead of +=         │
-│  · mutable module globals   │
-│  · bare division            │
-│  · max()/min() empty guard  │
-│  · date string comparison   │
-└─────────────┬───────────────┘
-              │ confirmed_bugs[]
-              ▼
-┌─────────────────────────────┐
-│       LLM First Pass        │
-│  · explain + fix AST bugs   │
-│  · inspect logs for         │
-│    semantic/runtime bugs    │
-└─────────────┬───────────────┘
-              ▼
-┌─────────────────────────────┐
-│        Second Pass          │
-│  · used for longer code     │
-│  · finds additional bugs    │
-└─────────────┬───────────────┘
-              ▼
-┌─────────────────────────────┐
-│      Critique + Refine      │
-│  · validates answer format  │
-│  · removes hallucinations   │
-│  · adds missed issues       │
-└─────────────┬───────────────┘
-              ▼
-┌─────────────────────────────┐
-│       Dedup + Renumber      │
-│  · merge duplicate blocks   │
-│  · normalize Bug 1..N       │
-└─────────────────────────────┘
-```
-
-***
-
-## Project Structure
-
-```text
-GENAI-DEBUGGER/
-├── backend/
-│   ├── knowledge_base/          # RAG source documents
-│   ├── models/
-│   │   └── request.py           # Pydantic request schema(s)
-│   ├── rag/                     # Vector store and retrieval helpers
-│   ├── routes/
-│   │   └── query.py             # FastAPI route(s), including /debug
-│   ├── scripts/
-│   │   ├── build_index.py       # Build vector index
-│   │   └── build_knowledge_base.py
-│   ├── services/
-│   │   └── llm_service.py       # AST + LLM multi-pass pipeline
-│   ├── .env                     # Local environment config
-│   └── main.py                  # FastAPI app entry point
-└── frontend/
-    ├── src/                     # React source
-    ├── public/
-    ├── index.html
-    ├── package.json
-    └── vite.config.js
-```
-
-***
+---
 
 ## Features
 
-- Deterministic AST pre-detection for recurring Python bug patterns.
-- Multi-pass local LLM analysis using Ollama's `POST /api/generate` endpoint.[1][2]
-- Optional second-pass review for longer code snippets.
-- Critique-and-refine stage to reduce hallucinated fixes.
-- Deduplication of repeated bug blocks.
-- Final renumbering so output starts consistently from `Bug 1`.
-- FastAPI backend for API access and a Vite-based React frontend for local interaction.[3][4][6]
+- Deterministic AST-based detection of common Python bugs
+- AI-powered detection and explanation of semantic and runtime issues
+- Multi-pass LLM analysis for improved debugging accuracy
+- RAG-based retrieval of relevant debugging knowledge and context
+- Critique-and-refine stage to validate and improve generated results
+- Automatic deduplication and renumbering of detected bugs
+- FastAPI backend for code debugging through REST APIs
+- React + Vite frontend for interactive code analysis
+- Local LLM execution using Qwen 2.5 Coder through Ollama
 
-***
-
-## Supported Bug Patterns
-
-| Pattern | Detection Method |
-|---|---|
-| `=+` instead of `+=` | AST `UnaryOp(UAdd)` |
-| Stale module-level mutable state | AST module-level assignment scan |
-| Division without zero check | AST `BinOp(Div)` |
-| `max()` / `min()` on possibly empty container | AST `Call` pattern |
-| Date-string comparison against `strftime(...)` | AST `Compare` pattern |
-| Call-chain division issues | Logs + LLM reasoning |
-| Counter reassign / return-flow issues | LLM critique + refine |
-| Other semantic bugs visible from logs | LLM passes |
-
-***
+---
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| LLM | Qwen 2.5 Coder via Ollama API |
-| Backend | FastAPI + Python |
-| Static Analysis | Python `ast` module |
-| Retrieval | FAISS / Chroma-style vector store layer |
-| Frontend | React + Vite |
-| API Style | REST JSON |
+**Frontend:**
+- React
+- Vite
+- JavaScript
 
-***
+**Backend:**
+- Python
+- FastAPI
 
-## Prerequisites
+**AI & LLM:**
+- Qwen 2.5 Coder
+- Ollama
+- LLM-based code analysis
+- RAG
 
-- Python 3.10+
-- Node.js 18+
-- Ollama installed locally
-- The required Ollama model pulled locally before starting the backend.[2][1]
+**Static Analysis:**
+- Python AST
 
-***
+**Retrieval:**
+- FAISS
+- Chroma
 
-## Setup
+**API:**
+- REST API
+- JSON
 
-### 1. Clone the repository
+---
 
-```bash
-git clone https://github.com/Abishek-003/genai-debugger.git
-cd genai-debugger
-```
+## How It Works
 
-### 2. Backend setup
+The debugging pipeline combines traditional static analysis with LLM-based reasoning:
 
-```bash
-cd backend
-python -m venv venv
-source venv/bin/activate
-# Windows: venv\Scripts\activate
-pip install -r requirements.txt
-```
+1. **AST Analysis**  
+   Python code is analyzed using the AST module to detect known structural bug patterns.
 
-Create `backend/.env`:
+2. **LLM Analysis**  
+   The code, logs, detected issues, and retrieved context are passed to the local Qwen 2.5 Coder model for deeper analysis.
 
-```env
-OLLAMA_URL=http://localhost:11434/api/generate
-MODEL=qwen2.5-coder:7b-instruct
-```
+3. **Second Pass Analysis**  
+   Longer code snippets can go through an additional analysis pass to identify further issues.
 
-Ollama serves its local API under `http://localhost:11434/api`, and `/api/generate` is the text generation endpoint used by this project.[2][1]
+4. **Critique & Refinement**  
+   The generated response is reviewed to identify missed issues, incorrect fixes, or hallucinations.
 
-### 3. Pull model and start Ollama
+5. **Deduplication**  
+   Repeated bug reports are merged and the final issues are consistently renumbered.
 
-```bash
-ollama pull qwen2.5-coder:7b-instruct
-ollama serve
-```
+---
 
-### 4. Build the knowledge base and index
+## Supported Bug Patterns
 
-```bash
-python scripts/build_knowledge_base.py
-python scripts/build_index.py
-```
+- `=+` used instead of `+=`
+- Mutable module-level state
+- Division without zero checks
+- `max()` / `min()` on potentially empty containers
+- Date-string comparison issues
+- Call-chain division issues
+- Counter reassignment and return-flow issues
+- Other semantic bugs identified through LLM analysis and logs
 
-### 5. Start the backend
+---
 
-```bash
-uvicorn main:app --reload --port 8000
-```
+## Setup Instructions
 
-FastAPI projects are commonly run with Uvicorn using `main:app --reload`, and local development is typically accessed on `http://127.0.0.1:8000` or `http://localhost:8000`.[3][7]
+### 1. Clone the Repository
 
-### 6. Frontend setup
+    git clone https://github.com/an-iqbal/genai-code-debugger.git
+    cd genai-code-debugger
 
-```bash
-cd ../frontend
-npm install
-npm run dev
-```
+### 2. Backend Setup
 
+    cd backend
+    python -m venv venv
 
+Activate the virtual environment:
 
-- Frontend: `http://localhost:5173`
-- Backend: `http://localhost:8000`
+**Windows:**
 
-***
+    venv\Scripts\activate
 
-## API
+**macOS/Linux:**
+
+    source venv/bin/activate
+
+Install the required packages:
+
+    pip install -r requirements.txt
+
+### 3. Configure Ollama
+
+Install Ollama and pull the required model:
+
+    ollama pull qwen2.5-coder:7b-instruct
+
+Start Ollama:
+
+    ollama serve
+
+Create a `.env` file inside the `backend` directory:
+
+    OLLAMA_URL=http://localhost:11434/api/generate
+    MODEL=qwen2.5-coder:7b-instruct
+
+### 4. Build the Knowledge Base
+
+    python scripts/build_knowledge_base.py
+    python scripts/build_index.py
+
+### 5. Run the Backend
+
+    uvicorn main:app --reload --port 8000
+
+The backend will be available at:
+
+    http://localhost:8000
+
+### 6. Run the Frontend
+
+Open a new terminal:
+
+    cd frontend
+    npm install
+    npm run dev
+
+The frontend will be available at:
+
+    http://localhost:5173
+
+---
+
+## API Usage
 
 ### `POST /debug`
 
-**Request body**
+**Request:**
 
-```json
-{
-  "query": "Identify all the bugs",
-  "code": "total = 0\n\ndef process(x):\n    total =+ x\n",
-  "logs": "total shows 5 after 3 calls — expected 15"
-}
-```
-
-**Example response**
-
-```json
-{
-  "ast_bugs": [
     {
-      "line": 4,
-      "code": "total =+ x",
-      "type": "=+ instead of +="
+      "query": "Identify all the bugs",
+      "code": "total = 0\n\ndef process(x):\n    total =+ x\n",
+      "logs": "total shows 5 after 3 calls — expected 15"
     }
-  ],
-  "initial_answer": "Bug 1:\nIssue: ...",
-  "critique": "Correct? NO\n...",
-  "final_answer": "Bug 1:\nIssue: `total =+ x`\nExplanation: ...\nFix:\n```python\ntotal += x\n```"
-}
-```
 
-***
+The API returns detected AST issues along with the LLM-generated analysis, critique, and refined final answer.
 
-## Limitations
+---
 
-- AST pre-detection is Python-specific.
-- Deeper semantic bugs still depend on the local model and log quality.
-- Very small local models may miss long-range call-chain issues.
-- False positives are still possible on some date-comparison and division patterns.
-- Exact behavior depends on the current `llm_service.py` pipeline and prompt wording.
+## Project Highlights
 
-***
+- Combines **deterministic static analysis with LLM reasoning**
+- Uses **RAG to provide relevant debugging context**
+- Runs the LLM **locally** through Ollama
+- Uses a **multi-pass architecture** to improve analysis quality
+- Provides an interactive **React frontend and FastAPI backend**
+- Designed to reduce hallucinated fixes through automated critique and refinement
+
+---
+
+## Contact
+
+Have questions or suggestions? I’d love to hear from you!
+
+- Anwar Iqbal: [anwar.iqbal1390@gmail.com](mailto:anwar.iqbal1390@gmail.com)
+
+---
+
+## Contributing
+
+Contributions are welcome! Feel free to submit issues or open pull requests to improve the project.

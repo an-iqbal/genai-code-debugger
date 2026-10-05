@@ -181,7 +181,7 @@ The API returns detected AST issues along with the LLM-generated analysis, criti
 
 Have questions or suggestions? I’d love to hear from you!
 
-- Anwar Iqbal: [anwar.iqbal1390@gmail.com](mailto:anwar.iqbal1390@gmail.com)
+- Anwar Iqbal: [anwariqbal.work@gmail.com](mailto:anwariqbal.work@gmail.com)
 
 ---
 
